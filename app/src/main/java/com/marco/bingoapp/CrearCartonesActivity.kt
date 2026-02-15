@@ -170,20 +170,11 @@ class CrearCartonesActivity : AppCompatActivity() {
         val canvas = Canvas(bitmap)
         val paint = Paint()
 
-        // Fondo blanco
+        // Fondo blanco inicial
         paint.color = Color.WHITE
         canvas.drawRect(0f, 0f, ancho.toFloat(), alto.toFloat(), paint)
 
-        // Fondo con imagen seleccionada
-        rutaImagenFondo?.let {
-            val fondo = BitmapFactory.decodeFile(it)
-            fondo?.let { bmp ->
-                val scaled = Bitmap.createScaledBitmap(bmp, ancho, alto, true)
-                canvas.drawBitmap(scaled, 0f, 0f, null)
-            }
-        }
-
-        // Cuadrícula
+        // Dibujar cuadrícula y contenido
         val gridPaint = Paint().apply {
             color = Color.BLACK
             style = Paint.Style.STROKE
@@ -197,7 +188,6 @@ class CrearCartonesActivity : AppCompatActivity() {
 
         for (row in 0 until filas) {
             if (row == filas - 1) {
-                // Última fila: solo dos celdas
                 val lastRowTop = startY + row * cellSize
                 val lastRowBottom = lastRowTop + cellSize
                 val midX = startX + (columnas * cellSize) / 2
@@ -217,7 +207,7 @@ class CrearCartonesActivity : AppCompatActivity() {
         // Borde externo
         canvas.drawRect(startX, startY, startX + columnas * cellSize, startY + filas * cellSize, borderPaint)
 
-        // Encabezado BINGO en la primera fila
+        // Encabezado BINGO
         val letras = listOf("B", "I", "N", "G", "O")
         paint.textSize = 50f
         paint.color = colorEncabezado
@@ -228,7 +218,7 @@ class CrearCartonesActivity : AppCompatActivity() {
             canvas.drawText(letras[i], x, y, paint)
         }
 
-        // Números en filas 2–6
+        // Números
         paint.textSize = 36f
         paint.color = Color.BLACK
         paint.textAlign = Paint.Align.CENTER
@@ -254,16 +244,10 @@ class CrearCartonesActivity : AppCompatActivity() {
             }
         }
 
-        // Última fila: solo dos celdas (izquierda: número, derecha: fecha)
+        // Última fila: número y fecha
         val lastRowTop = startY + (filas - 1) * cellSize
-        val lastRowBottom = lastRowTop + cellSize
         val midX = startX + (columnas * cellSize) / 2
 
-        // Dibujar las dos celdas
-        canvas.drawRect(startX, lastRowTop, midX, lastRowBottom, gridPaint)
-        canvas.drawRect(midX, lastRowTop, startX + columnas * cellSize, lastRowBottom, gridPaint)
-
-        // Texto dentro de las dos celdas
         paint.textSize = 28f
         paint.color = Color.BLACK
         paint.textAlign = Paint.Align.CENTER
@@ -275,6 +259,21 @@ class CrearCartonesActivity : AppCompatActivity() {
         val rightCellX = midX + (startX + columnas * cellSize - midX) / 2
         val rightCellY = lastRowTop + cellSize / 2 + 10f
         canvas.drawText("Fecha: $fecha", rightCellX, rightCellY, paint)
+
+        // 🔑 Superponer la imagen seleccionada como marca de agua transparente
+        rutaImagenFondo?.let {
+            val fondo = BitmapFactory.decodeFile(it)
+            fondo?.let { bmp ->
+                val scaled = Bitmap.createScaledBitmap(
+                    bmp,
+                    (columnas * cellSize).toInt(),
+                    (filas * cellSize).toInt(),
+                    true
+                )
+                val paintFondo = Paint().apply { alpha = 80 } // transparencia baja
+                canvas.drawBitmap(scaled, startX, startY, paintFondo)
+            }
+        }
 
         return bitmap
     }
