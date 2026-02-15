@@ -1,23 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical"
-    android:gravity="center"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#2196F3"
+    android:columnCount="2"
+    android:rowCount="4"
+    android:alignmentMode="alignMargins"
+    android:useDefaultMargins="true"
+    android:gravity="center"
     tools:context=".MainActivity">
 
+    <!-- Título ocupa las dos columnas -->
     <TextView
-        android:id="@+id/txtNumero"
-        android:text="Número"
-        android:textSize="32sp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="16dp"/>
+        android:id="@+id/txtTitulo"
+        android:text="Bingo Especial"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:layout_columnSpan="2"
+        android:gravity="center"
+        android:layout_marginBottom="32dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Botones -->
+    <Button
+        android:id="@+id/btnCrearCartones"
+        android:text="Crear Cartones"
+        android:backgroundTint="#4CAF50"
+        android:textColor="@android:color/white"
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"/>
 
     <Button
-        android:id="@+id/btnGenerar"
-        android:text="Generar Número"
-        android:layout_width="wrap_content"
+        android:id="@+id/btnJugar"
+        android:text="Jugar"
+        android:backgroundTint="#4CAF50"
+        android:textColor="@android:color/white"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"/>
-</LinearLayout>
+
+    <Button
+        android:id="@+id/btnPagos"
+        android:text="Pagos"
+        android:backgroundTint="#4CAF50"
+        android:textColor="@android:color/white"
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnVentas"
+        android:text="Ventas"
+        android:backgroundTint="#4CAF50"
+        android:textColor="@android:color/white"
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnModalidades"
+        android:text="Modalidades"
+        android:backgroundTint="#4CAF50"
+        android:textColor="@android:color/white"
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnConfiguracion"
+        android:text="Configuración"
+        android:backgroundTint="#4CAF50"
+        android:textColor="@android:color/white"
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"/>
+</GridLayout>
