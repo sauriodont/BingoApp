@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+        <!-- Cantidad de cartones -->
         <EditText
             android:id="@+id/txtCantidad"
             android:hint="Cantidad de Cartones"
@@ -18,6 +19,7 @@
             android:layout_height="wrap_content"
             android:background="@android:color/white"/>
 
+        <!-- Imagen de fondo -->
         <Button
             android:id="@+id/btnImagenFondo"
             android:text="Seleccionar Imagen de Fondo"
@@ -27,6 +29,7 @@
             android:textColor="@android:color/white"
             android:layout_marginTop="16dp"/>
 
+        <!-- Color encabezado -->
         <Button
             android:id="@+id/btnColorEncabezado"
             android:text="Seleccionar Color Encabezado"
@@ -36,6 +39,7 @@
             android:textColor="@android:color/white"
             android:layout_marginTop="16dp"/>
 
+        <!-- Vista previa -->
         <Button
             android:id="@+id/btnVistaPrevia"
             android:text="Vista Previa"
@@ -45,9 +49,19 @@
             android:textColor="@android:color/white"
             android:layout_marginTop="16dp"/>
 
+        <!-- Control de vista previa -->
+        <ImageView
+            android:id="@+id/imgVistaPrevia"
+            android:layout_width="match_parent"
+            android:layout_height="400dp"
+            android:layout_marginTop="16dp"
+            android:background="@android:color/white"
+            android:scaleType="fitCenter"/>
+
+        <!-- Crear cartones -->
         <Button
             android:id="@+id/btnCrear"
-            android:text="Crear"
+            android:text="Crear Cartones"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:backgroundTint="#4CAF50"
