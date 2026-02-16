@@ -25,6 +25,8 @@
             </intent-filter>
         </activity>
         <activity android:name=".CrearCartonesActivity" />
+        <activity android:name=".ModalidadesActivity" />
+        <activity android:name=".VentasActivity" />
     </application>
 
 </manifest>

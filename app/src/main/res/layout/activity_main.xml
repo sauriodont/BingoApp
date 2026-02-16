@@ -67,9 +67,9 @@
 
     <Button
         android:id="@+id/btnConfiguracion"
-        android:text="Configuración"
+        android:layout_width="172dp"
+        android:layout_height="wrap_content"
         android:backgroundTint="#4CAF50"
-        android:textColor="@android:color/white"
-        android:layout_width="150dp"
-        android:layout_height="wrap_content"/>
+        android:text="Configuración"
+        android:textColor="@android:color/white" />
 </GridLayout>

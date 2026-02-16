@@ -32,11 +32,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnVentas.setOnClickListener {
-            Toast.makeText(this, "Ventas", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, VentasActivity::class.java)
+            startActivity(intent)
         }
 
+// Ir a Modalidades (Antes de jugar, el usuario debe elegir cómo se gana)
         binding.btnModalidades.setOnClickListener {
-            Toast.makeText(this, "Modalidades", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, ModalidadesActivity::class.java)
+            startActivity(intent)
         }
 
         binding.btnConfiguracion.setOnClickListener {

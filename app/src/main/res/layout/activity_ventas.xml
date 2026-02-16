@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#4A76C5"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tvTituloVentas"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="VENTAS"
+        android:textColor="@android:color/white"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/formVenta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="20dp"
+        app:layout_constraintTop_toBottomOf="@id/tvTituloVentas">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="10dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Numero Carton: " android:textSize="18sp" android:textStyle="bold"/>
+            <Spinner android:id="@+id/spnCartones" android:layout_width="match_parent" android:layout_height="45dp" android:background="@drawable/shape_edittext_modalidad"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="10dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Nombre: " android:textSize="18sp" android:textStyle="bold"/>
+            <EditText android:id="@+id/etNombreComprador" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/shape_edittext_modalidad" android:padding="10dp" android:inputType="textPersonName"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pago: " android:textSize="18sp" android:textStyle="bold"/>
+            <RadioGroup android:id="@+id/rgPago" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                <RadioButton android:id="@+id/rbSi" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Si" android:layout_marginStart="20dp"/>
+                <RadioButton android:id="@+id/rbNo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="No" android:checked="true" android:layout_marginStart="20dp"/>
+            </RadioGroup>
+        </LinearLayout>
+
+        <Button android:id="@+id/btnGuardarVenta" android:layout_width="150dp" android:layout_height="wrap_content" android:text="Guardar" android:layout_gravity="center" android:backgroundTint="#8BC34A" android:textColor="@android:color/black" android:layout_marginTop="10dp"/>
+    </LinearLayout>
+
+    <TableLayout
+        android:id="@+id/tlHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        app:layout_constraintTop_toBottomOf="@id/formVenta">
+        <TableRow android:background="#FFC107" android:padding="8dp">
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:text="Carton" android:textStyle="bold"/>
+            <TextView android:layout_width="0dp" android:layout_weight="2" android:text="Nombre" android:textStyle="bold"/>
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:text="Pagado" android:textStyle="bold" android:gravity="center"/>
+        </TableRow>
+    </TableLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvVentas"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#FFF3E0"
+        app:layout_constraintTop_toBottomOf="@id/tlHeader"
+        app:layout_constraintBottom_toTopOf="@id/btnCopiarLista"/>
+
+    <Button
+        android:id="@+id/btnCopiarLista"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Copiar Lista"
+        android:backgroundTint="#8BC34A"
+        android:textColor="@android:color/black"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#4A76C5"
+    android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tvTitulo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Crear\nModalidades"
+            android:textAlignment="center"
+            android:textColor="@android:color/white"
+            android:textSize="42sp"
+            android:textStyle="bold"
+            android:shadowColor="#000000"
+            android:shadowDx="2"
+            android:shadowDy="2"
+            android:shadowRadius="5"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <LinearLayout
+            android:id="@+id/layoutNombre"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="30dp"
+            app:layout_constraintTop_toBottomOf="@id/tvTitulo"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nombre modalidad:"
+                android:textColor="@android:color/black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/txtNombreModalidad"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/shape_edittext_modalidad"
+                android:padding="10dp"
+                android:hint="Ej. Letra X"
+                android:inputType="text" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/contenedorCarton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="#000000"
+            android:padding="4dp"
+            app:layout_constraintTop_toBottomOf="@id/layoutNombre"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <GridLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:columnCount="5"
+                    android:background="#8BC34A">
+
+                    <TextView style="@style/EstiloHeaderBingo" android:text="B" />
+                    <TextView style="@style/EstiloHeaderBingo" android:text="I" />
+                    <TextView style="@style/EstiloHeaderBingo" android:text="N" />
+                    <TextView style="@style/EstiloHeaderBingo" android:text="G" />
+                    <TextView style="@style/EstiloHeaderBingo" android:text="O" />
+                </GridLayout>
+
+                <GridLayout
+                    android:id="@+id/gridModalidad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:columnCount="5"
+                    android:rowCount="5"
+                    android:background="#000000"> <TextView android:id="@+id/cell_0_0" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_0_1" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_0_2" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_0_3" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_0_4" style="@style/EstiloCeldaModalidad" />
+
+                    <TextView android:id="@+id/cell_1_0" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_1_1" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_1_2" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_1_3" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_1_4" style="@style/EstiloCeldaModalidad" />
+
+                    <TextView android:id="@+id/cell_2_0" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_2_1" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_2_2" style="@style/EstiloCeldaModalidad" android:text="LIBRE" android:textSize="10sp" android:textStyle="bold" android:background="#8BC34A" />
+                    <TextView android:id="@+id/cell_2_3" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_2_4" style="@style/EstiloCeldaModalidad" />
+
+                    <TextView android:id="@+id/cell_3_0" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_3_1" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_3_2" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_3_3" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_3_4" style="@style/EstiloCeldaModalidad" />
+
+                    <TextView android:id="@+id/cell_4_0" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_4_1" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_4_2" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_4_3" style="@style/EstiloCeldaModalidad" />
+                    <TextView android:id="@+id/cell_4_4" style="@style/EstiloCeldaModalidad" />
+
+                </GridLayout>
+            </LinearLayout>
+        </FrameLayout>
+
+        <Button
+            android:id="@+id/btnGuardarModalidad"
+            android:layout_width="200dp"
+            android:layout_height="70dp"
+            android:layout_marginTop="30dp"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="#8BC34A"
+            android:text="Guardar"
+            android:textAllCaps="false"
+            android:textColor="@android:color/black"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/contenedorCarton"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

@@ -1,9 +1,8 @@
 package com.marco.bingoapp
 
 import android.app.Activity
-import android.content.ContentValues
+import android.app.AlertDialog
 import android.content.Intent
-import android.database.Cursor
 import android.graphics.*
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -11,9 +10,9 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -22,9 +21,21 @@ import java.util.*
 class CrearCartonesActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: BingoDbHelper
-    private var rutaImagenFondo: String? = null
-    private var colorEncabezado: Int = Color.BLUE
+    private var uriImagenFondo: Uri? = null
+    private var colorPersonalizado: Int = Color.parseColor("#3F51B5")
     private lateinit var imgFondoPreview: ImageView
+
+    // 1. Lanzador moderno para la galería (Reemplaza startActivityForResult)
+    private val galleryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            uriImagenFreq(result.data?.data)
+        }
+    }
+
+    private fun uriImagenFreq(uri: Uri?) {
+        uriImagenFondo = uri
+        uri?.let { imgFondoPreview.setImageURI(it) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,243 +48,171 @@ class CrearCartonesActivity : AppCompatActivity() {
         val btnColorEncabezado = findViewById<Button>(R.id.btnColorEncabezado)
         val btnVistaPrevia = findViewById<Button>(R.id.btnVistaPrevia)
         val btnCrear = findViewById<Button>(R.id.btnCrear)
-        val imgVistaPrevia = findViewById<ImageView>(R.id.imgVistaPrevia)
-        imgFondoPreview = findViewById(R.id.imgVistaPrevia) // pequeño preview del fondo
+        imgFondoPreview = findViewById(R.id.imgVistaPrevia)
 
-        // Seleccionar imagen de fondo
+        // Botón: Seleccionar imagen
         btnImagenFondo.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            startActivityForResult(intent, 100)
+            galleryLauncher.launch(intent)
         }
 
-        // Seleccionar color encabezado (ejemplo simple)
-        btnColorEncabezado.setOnClickListener {
-            colorEncabezado = Color.RED
-            Toast.makeText(this, "Color encabezado cambiado", Toast.LENGTH_SHORT).show()
-        }
+        // Botón: Color
+        btnColorEncabezado.setOnClickListener { mostrarSelectorColores() }
 
-        // Vista previa
+        // Botón: Vista Previa
         btnVistaPrevia.setOnClickListener {
             val fecha = obtenerFechaActual()
-            val cartonJson = generarCartonJson()
-            val gson = Gson()
-            val tipo = object : TypeToken<Map<String, List<Any>>>() {}.type
-            val carton: Map<String, List<Any>> = gson.fromJson(cartonJson, tipo)
-            val bitmap = generarImagenCarton(carton, 1, fecha)
-            imgVistaPrevia.setImageBitmap(bitmap)
+            val cartonData = generarEstructuraCarton()
+            val bitmap = generarImagenCarton(cartonData, 0, fecha)
+            imgFondoPreview.setImageBitmap(bitmap)
         }
 
-        // Crear cartones
+        // Botón: Crear Cartones
         btnCrear.setOnClickListener {
-            val cantidad = txtCantidad.text.toString().toIntOrNull() ?: 0
-            if (cantidad > 0) {
-                val carpeta = obtenerCarpetaCartones()
-                val fecha = obtenerFechaActual()
-                for (i in 1..cantidad) {
-                    val cartonJson = generarCartonJson()
-                    insertarCarton("Jugador $i", cartonJson, fecha)
-                    val gson = Gson()
-                    val tipo = object : TypeToken<Map<String, List<Any>>>() {}.type
-                    val carton: Map<String, List<Any>> = gson.fromJson(cartonJson, tipo)
-                    val bitmap = generarImagenCarton(carton, i, fecha)
-                    guardarImagen(bitmap, carpeta, "carton_$i")
+            val cantidadTexto = txtCantidad.text.toString()
+            if (cantidadTexto.isEmpty()) {
+                txtCantidad.error = "Ingresa una cantidad"
+                return@setOnClickListener
+            }
+
+            val cantidad = cantidadTexto.toInt()
+            if (cantidad <= 0) return@setOnClickListener
+
+            Toast.makeText(this, "Generando y guardando $cantidad cartones...", Toast.LENGTH_SHORT).show()
+
+            val fecha = obtenerFechaActual()
+            val carpeta = obtenerCarpetaCartonesLimpiarAntiguos()
+
+            // Paso crítico: Limpiar base de datos para nueva serie
+            dbHelper.borrarTodosLosCartones()
+
+            // Pequeño retraso para permitir que el Toast se muestre antes del bucle pesado
+            txtCantidad.postDelayed({
+                try {
+                    for (i in 1..cantidad) {
+                        val cartonData = generarEstructuraCarton()
+                        val cartonJson = Gson().toJson(cartonData)
+
+                        // 2. GUARDAR EN BD: Esto habilita los datos para la pantalla VENTAS
+                        dbHelper.insertarCarton("Jugador $i", cartonJson, fecha)
+
+                        // 3. GENERAR IMAGEN: Archivo físico para compartir
+                        val bitmap = generarImagenCarton(cartonData, i, fecha)
+                        guardarImagen(bitmap, carpeta, "carton_numero_$i")
+                        bitmap.recycle()
+                    }
+
+                    Toast.makeText(this, "¡Éxito! Base de datos y galería actualizadas.", Toast.LENGTH_LONG).show()
+                    txtCantidad.text.clear()
+
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-                Toast.makeText(this, "$cantidad cartones creados y guardados en la galería", Toast.LENGTH_LONG).show()
-            }
+            }, 500)
         }
     }
 
-    // Obtener ruta real del archivo desde un Uri
-    private fun getRealPathFromURI(contentUri: Uri): String? {
-        var cursor: Cursor? = null
-        return try {
-            val proj = arrayOf(MediaStore.Images.Media.DATA)
-            cursor = contentResolver.query(contentUri, proj, null, null, null)
-            val columnIndex = cursor?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-            cursor?.moveToFirst()
-            cursor?.getString(columnIndex ?: 0)
-        } finally {
-            cursor?.close()
-        }
+    private fun mostrarSelectorColores() {
+        val colores = intArrayOf(Color.RED, Color.BLUE, Color.BLACK, Color.parseColor("#4CAF50"),
+            Color.parseColor("#E91E63"), Color.parseColor("#FF9800"), Color.parseColor("#9C27B0"))
+        val nombres = arrayOf("Rojo", "Azul", "Negro", "Verde", "Rosa", "Naranja", "Morado")
+
+        AlertDialog.Builder(this)
+            .setTitle("Color de diseño")
+            .setItems(nombres) { _, i ->
+                colorPersonalizado = colores[i]
+            }.show()
     }
 
-    // Recibir imagen seleccionada
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 100 && resultCode == Activity.RESULT_OK) {
-            val selectedImage: Uri? = data?.data
-            selectedImage?.let {
-                rutaImagenFondo = getRealPathFromURI(it)
-                imgFondoPreview.setImageURI(it) // mostrar preview
-                Toast.makeText(this, "Imagen seleccionada correctamente", Toast.LENGTH_SHORT).show()
-            }
-        }
+    private fun generarEstructuraCarton(): Map<String, List<Any>> {
+        fun col(r: IntRange): List<Any> = r.shuffled().take(5).sorted()
+        val nCol = (31..45).shuffled().take(4).toMutableList<Any>()
+        nCol.add(2, "LIBRE")
+        return mapOf("B" to col(1..15), "I" to col(16..30), "N" to nCol, "G" to col(46..60), "O" to col(61..75))
     }
 
-    private fun generarCartonJson(): String {
-        val gson = Gson()
-        val carton = mapOf(
-            "B" to List(5) { (1..15).random() },
-            "I" to List(5) { (16..30).random() },
-            "N" to listOf((31..45).random(), (31..45).random(), "LIBRE", (31..45).random(), (31..45).random()),
-            "G" to List(5) { (46..60).random() },
-            "O" to List(5) { (61..75).random() }
-        )
-        return gson.toJson(carton)
-    }
+    private fun obtenerFechaActual() = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
 
-    private fun insertarCarton(jugador: String, cartonJson: String, fecha: String) {
-        val db = dbHelper.writableDatabase
-        val values = ContentValues().apply {
-            put("jugador", jugador)
-            put("numeros", cartonJson)
-            put("fecha", fecha)
-        }
-        db.insert("cartones", null, values)
-    }
-
-    private fun obtenerFechaActual(): String {
-        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        return sdf.format(Date())
-    }
-
-    private fun obtenerCarpetaCartones(): File {
-        val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val cartonesDir = File(picturesDir, "Cartones")
-        if (!cartonesDir.exists()) {
-            cartonesDir.mkdirs()
-        } else {
-            cartonesDir.listFiles()?.forEach { it.delete() }
-        }
+    private fun obtenerCarpetaCartonesLimpiarAntiguos(): File {
+        val cartonesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "CartonesBingo")
+        if (cartonesDir.exists()) cartonesDir.listFiles()?.forEach { it.delete() } else cartonesDir.mkdirs()
         return cartonesDir
     }
 
     private fun guardarImagen(bitmap: Bitmap, carpeta: File, nombre: String) {
         val archivo = File(carpeta, "$nombre.png")
-        val outputStream = FileOutputStream(archivo)
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-        outputStream.flush()
-        outputStream.close()
+        FileOutputStream(archivo).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
         MediaScannerConnection.scanFile(this, arrayOf(archivo.absolutePath), null, null)
     }
 
     private fun generarImagenCarton(carton: Map<String, List<Any>>, numero: Int, fecha: String): Bitmap {
-        val cellSize = 100f
-        val columnas = 5
-        val filas = 7 // 1 fila BINGO + 5 filas números + 1 fila número/fecha
-        val ancho = (columnas * cellSize + 100).toInt()
-        val alto = (filas * cellSize + 150).toInt()
+        val cellSize = 120f
         val startX = 50f
         val startY = 50f
+        val ancho = (5 * cellSize + 100).toInt()
+        val alto = (7 * cellSize + 100).toInt()
 
         val bitmap = Bitmap.createBitmap(ancho, alto, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val paint = Paint()
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        canvas.drawColor(Color.WHITE)
 
-        // Fondo blanco inicial
-        paint.color = Color.WHITE
-        canvas.drawRect(0f, 0f, ancho.toFloat(), alto.toFloat(), paint)
-
-        // Dibujar cuadrícula y contenido
-        val gridPaint = Paint().apply {
-            color = Color.BLACK
-            style = Paint.Style.STROKE
-            strokeWidth = 2f
-        }
-        val borderPaint = Paint().apply {
-            color = Color.BLACK
-            style = Paint.Style.STROKE
-            strokeWidth = 8f
-        }
-
-        for (row in 0 until filas) {
-            if (row == filas - 1) {
-                val lastRowTop = startY + row * cellSize
-                val lastRowBottom = lastRowTop + cellSize
-                val midX = startX + (columnas * cellSize) / 2
-                canvas.drawRect(startX, lastRowTop, midX, lastRowBottom, gridPaint)
-                canvas.drawRect(midX, lastRowTop, startX + columnas * cellSize, lastRowBottom, gridPaint)
-            } else {
-                for (col in 0 until columnas) {
-                    val left = startX + col * cellSize
-                    val top = startY + row * cellSize
-                    val right = left + cellSize
-                    val bottom = top + cellSize
-                    canvas.drawRect(left, top, right, bottom, gridPaint)
+        // Marca de agua
+        uriImagenFondo?.let { uri ->
+            try {
+                contentResolver.openInputStream(uri)?.use { stream ->
+                    val bmp = BitmapFactory.decodeStream(stream)
+                    val rect = RectF(startX, startY + cellSize, startX + 5 * cellSize, startY + 6 * cellSize)
+                    canvas.drawBitmap(bmp, null, rect, Paint().apply { alpha = 65 })
                 }
-            }
+            } catch (e: Exception) {}
         }
 
-        // Borde externo
-        canvas.drawRect(startX, startY, startX + columnas * cellSize, startY + filas * cellSize, borderPaint)
+        // Estilos de Header/Footer
+        paint.color = colorPersonalizado
+        canvas.drawRect(startX, startY, startX + 5 * cellSize, startY + cellSize, paint)
+        canvas.drawRect(startX, startY + 6 * cellSize, startX + 5 * cellSize, startY + 7 * cellSize, paint)
 
-        // Encabezado BINGO
+        // Cuadrícula
+        paint.color = Color.BLACK
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 3f
+        for (i in 0..7) canvas.drawLine(startX, startY + i * cellSize, startX + 5 * cellSize, startY + i * cellSize, paint)
+        for (i in 0..5) canvas.drawLine(startX + i * cellSize, startY, startX + i * cellSize, startY + 6 * cellSize, paint)
+
+        // Dibujar Números y Letras
+        paint.style = Paint.Style.FILL
+        paint.textAlign = Paint.Align.CENTER
+        paint.isFakeBoldText = true
+
+        // BINGO
+        paint.color = Color.WHITE; paint.textSize = 60f
         val letras = listOf("B", "I", "N", "G", "O")
-        paint.textSize = 50f
-        paint.color = colorEncabezado
-        paint.textAlign = Paint.Align.CENTER
-        for (i in letras.indices) {
-            val x = startX + i * cellSize + cellSize / 2
-            val y = startY + cellSize / 2 + 15f
-            canvas.drawText(letras[i], x, y, paint)
-        }
+        letras.forEachIndexed { i, s -> canvas.drawText(s, startX + i * cellSize + cellSize/2, startY + cellSize/2 + 20f, paint) }
 
-        // Números
-        paint.textSize = 36f
-        paint.color = Color.BLACK
-        paint.textAlign = Paint.Align.CENTER
-        for ((col, letra) in letras.withIndex()) {
-            val numeros = carton[letra] ?: emptyList()
-            for ((fila, valor) in numeros.withIndex()) {
-                val texto = if (valor is Number) valor.toInt().toString() else valor.toString()
-                val x = startX + col * cellSize + cellSize / 2
-                val y = startY + (fila + 1) * cellSize + cellSize / 2 + 12f
-
-                if (texto == "LIBRE") {
-                    val librePaint = Paint().apply {
-                        color = Color.YELLOW
-                        style = Paint.Style.FILL
-                    }
-                    val left = startX + col * cellSize
-                    val top = startY + (fila + 1) * cellSize
-                    val right = left + cellSize
-                    val bottom = top + cellSize
-                    canvas.drawRect(left, top, right, bottom, librePaint)
+        // Números del cartón
+        letras.forEachIndexed { colIndex, letra ->
+            val filaDatos = carton[letra] as List<*>
+            filaDatos.forEachIndexed { filaIndex, valor ->
+                val x = startX + colIndex * cellSize + cellSize/2
+                val y = startY + (filaIndex + 1) * cellSize + cellSize/2 + 15f
+                if (valor == "LIBRE") {
+                    canvas.drawRect(startX + colIndex * cellSize + 10, startY + (filaIndex + 1) * cellSize + 10, startX + (colIndex + 1) * cellSize - 10, startY + (filaIndex + 2) * cellSize - 10, Paint().apply { color = colorPersonalizado })
+                    paint.color = Color.WHITE; paint.textSize = 25f
+                    canvas.drawText("LIBRE", x, y, paint)
+                } else {
+                    paint.color = Color.BLACK; paint.textSize = 40f
+                    canvas.drawText(valor.toString(), x, y, paint)
                 }
-                canvas.drawText(texto, x, y, paint)
             }
         }
 
-        // Última fila: número y fecha
-        val lastRowTop = startY + (filas - 1) * cellSize
-        val midX = startX + (columnas * cellSize) / 2
-
-        paint.textSize = 28f
-        paint.color = Color.BLACK
-        paint.textAlign = Paint.Align.CENTER
-
-        val leftCellX = startX + (midX - startX) / 2
-        val leftCellY = lastRowTop + cellSize / 2 + 10f
-        canvas.drawText("Cartón No. $numero", leftCellX, leftCellY, paint)
-
-        val rightCellX = midX + (startX + columnas * cellSize - midX) / 2
-        val rightCellY = lastRowTop + cellSize / 2 + 10f
-        canvas.drawText("Fecha: $fecha", rightCellX, rightCellY, paint)
-
-        // 🔑 Superponer la imagen seleccionada como marca de agua transparente
-        rutaImagenFondo?.let {
-            val fondo = BitmapFactory.decodeFile(it)
-            fondo?.let { bmp ->
-                val scaled = Bitmap.createScaledBitmap(
-                    bmp,
-                    (columnas * cellSize).toInt(),
-                    (filas * cellSize).toInt(),
-                    true
-                )
-                val paintFondo = Paint().apply { alpha = 80 } // transparencia baja
-                canvas.drawBitmap(scaled, startX, startY, paintFondo)
-            }
-        }
+        // Footer
+        paint.color = Color.WHITE; paint.textSize = 30f
+        canvas.drawText("Cartón #$numero", startX + 1.25f * cellSize, startY + 6.5f * cellSize + 10f, paint)
+        canvas.drawText(fecha, startX + 3.75f * cellSize, startY + 6.5f * cellSize + 10f, paint)
 
         return bitmap
     }
