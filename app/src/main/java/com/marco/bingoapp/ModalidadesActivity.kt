@@ -5,32 +5,29 @@ import android.os.Bundle
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-// Asegúrate de que el paquete sea el correcto según tu proyecto
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.marco.bingoapp.databinding.ActivityModalidadesBinding
 
 class ModalidadesActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityModalidadesBinding
-    // Matriz para rastrear qué celdas están activas
+    private lateinit var dbHelper: BingoDbHelper
+    private lateinit var adapter: ModalidadesAdapter
     private val celdasSeleccionadas = Array(5) { BooleanArray(5) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Inflar el binding
         binding = ActivityModalidadesBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        dbHelper = BingoDbHelper(this)
         setupGridInteractivo()
+        setupRecyclerView()
 
-        // El ID en el XML es btnGuardarModalidad
-        binding.btnGuardarModalidad.setOnClickListener {
-            val nombre = binding.txtNombreModalidad.text.toString()
-            if (nombre.isEmpty()) {
-                Toast.makeText(this, "Escribe un nombre para la modalidad", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            guardarModalidad(nombre)
-        }
+        binding.btnGuardarModalidad.setOnClickListener { validarYGuardar() }
+
+        // Botón Limpiar (asegúrate de tenerlo en tu XML o añádelo)
+        binding.btnLimpiarGrid.setOnClickListener { limpiarGrid() }
     }
 
     private fun setupGridInteractivo() {
@@ -40,55 +37,94 @@ class ModalidadesActivity : AppCompatActivity() {
                 val resId = resources.getIdentifier(cellIdName, "id", packageName)
                 val view = findViewById<TextView>(resId)
 
-                // Si es la celda central, la dejamos marcada por defecto
+                // Celda central LIBRE por defecto
                 if (i == 2 && j == 2) {
                     celdasSeleccionadas[i][j] = true
+                    view.setBackgroundColor(Color.parseColor("#8BC34A"))
                 }
 
                 view.setOnClickListener {
+                    if (i == 2 && j == 2) return@setOnClickListener // No desmarcar el centro
+
                     celdasSeleccionadas[i][j] = !celdasSeleccionadas[i][j]
-
-                    if (celdasSeleccionadas[i][j]) {
-                        view.setBackgroundColor(Color.parseColor("#8BC34A")) // Verde
-                    } else {
-                        view.setBackgroundColor(Color.parseColor("#2196F3")) // Azul
-                    }
-
-                    // Mantenemos el texto "LIBRE" si es la celda central
-                    if (i == 2 && j == 2) {
-                        view.text = "LIBRE"
-                    }
+                    view.setBackgroundColor(if (celdasSeleccionadas[i][j])
+                        Color.parseColor("#8BC34A") else Color.parseColor("#2196F3"))
                 }
             }
         }
     }
 
-    private fun guardarModalidad(nombre: String) {
-        val coordenadas = mutableListOf<String>()
+    private fun limpiarGrid() {
         for (i in 0 until 5) {
             for (j in 0 until 5) {
-                if (celdasSeleccionadas[i][j]) {
-                    coordenadas.add("$i,$j")
-                }
+                if (i == 2 && j == 2) continue
+                celdasSeleccionadas[i][j] = false
+                val resId = resources.getIdentifier("cell_${i}_${j}", "id", packageName)
+                findViewById<TextView>(resId).setBackgroundColor(Color.parseColor("#2196F3"))
+            }
+        }
+    }
+
+    private fun setupRecyclerView() {
+        val lista = cargarModalidadesDeBD()
+        adapter = ModalidadesAdapter(lista) { modalidad ->
+            dbHelper.eliminarModalidad(modalidad.id)
+            actualizarLista()
+        }
+        binding.rvModalidades.layoutManager = LinearLayoutManager(this)
+        binding.rvModalidades.adapter = adapter
+    }
+
+    private fun cargarModalidadesDeBD(): MutableList<Modalidad> {
+        val lista = mutableListOf<Modalidad>()
+        val cursor = dbHelper.obtenerTodasLasModalidades()
+        if (cursor.moveToFirst()) {
+            do {
+                lista.add(Modalidad(
+                    cursor.getInt(cursor.getColumnIndexOrThrow("id")),
+                    cursor.getString(cursor.getColumnIndexOrThrow("nombre")),
+                    cursor.getString(cursor.getColumnIndexOrThrow("configuracion"))
+                ))
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return lista
+    }
+
+    private fun actualizarLista() {
+        adapter.lista = cargarModalidadesDeBD()
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun validarYGuardar() {
+        val nombre = binding.txtNombreModalidad.text.toString().trim()
+        val coordenadas = mutableListOf<String>()
+
+        for (i in 0 until 5) {
+            for (j in 0 until 5) {
+                if (celdasSeleccionadas[i][j]) coordenadas.add("$i,$j")
             }
         }
 
-        if (coordenadas.isEmpty()) {
-            Toast.makeText(this, "Selecciona al menos una celda del patrón", Toast.LENGTH_SHORT).show()
+        val configString = coordenadas.joinToString(";")
+
+        if (nombre.isEmpty()) {
+            Toast.makeText(this, "Escribe un nombre", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Convertir lista a String: "0,0;0,1;4,4"
-        val configString = coordenadas.joinToString(";")
+        // VALIDACIÓN DE DUPLICADOS
+        if (dbHelper.existeModalidad(nombre, configString)) {
+            Toast.makeText(this, "El nombre o el patrón ya existen", Toast.LENGTH_LONG).show()
+            return
+        }
 
-        val dbHelper = BingoDbHelper(this)
         val id = dbHelper.insertarModalidad(nombre, configString)
-
         if (id != -1L) {
-            Toast.makeText(this, "Modalidad '$nombre' guardada con éxito", Toast.LENGTH_SHORT).show()
-            finish()
-        } else {
-            Toast.makeText(this, "Error al guardar en la base de datos", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Guardado", Toast.LENGTH_SHORT).show()
+            binding.txtNombreModalidad.text.clear()
+            limpiarGrid()
+            actualizarLista()
         }
     }
 }

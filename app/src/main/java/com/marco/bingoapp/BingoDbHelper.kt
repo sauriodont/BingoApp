@@ -74,7 +74,11 @@ class BingoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME,
         val db = this.readableDatabase
         return db.rawQuery("SELECT * FROM $TABLE_CARTONES ORDER BY $COLUMN_ID ASC", null)
     }
-
+    fun obtenerCartonPorId(id: String): android.database.Cursor {
+        val db = this.readableDatabase
+        // Usamos el ID para filtrar el cartón específico
+        return db.rawQuery("SELECT * FROM $TABLE_CARTONES WHERE $COLUMN_ID = ?", arrayOf(id))
+    }
     fun actualizarVenta(id: String, comprador: String, pagado: Int): Int {
         val db = this.writableDatabase
         val values = ContentValues().apply {
@@ -102,5 +106,21 @@ class BingoDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME,
     fun obtenerTodasLasModalidades(): android.database.Cursor {
         val db = this.readableDatabase
         return db.rawQuery("SELECT * FROM $TABLE_MODALIDADES", null)
+    }
+
+    fun eliminarModalidad(id: Int): Int {
+        val db = this.writableDatabase
+        return db.delete(TABLE_MODALIDADES, "$COLUMN_ID = ?", arrayOf(id.toString()))
+    }
+
+    fun existeModalidad(nombre: String, configuracion: String): Boolean {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM $TABLE_MODALIDADES WHERE $COLUMN_MOD_NOMBRE = ? OR $COLUMN_MOD_CONFIG = ?",
+            arrayOf(nombre, configuracion)
+        )
+        val existe = cursor.count > 0
+        cursor.close()
+        return existe
     }
 }

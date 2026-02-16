@@ -27,16 +27,27 @@ class VentasAdapter(private var cursor: Cursor) : RecyclerView.Adapter<VentasAda
             val nom = cursor.getString(cursor.getColumnIndexOrThrow("comprador"))
             val pag = cursor.getInt(cursor.getColumnIndexOrThrow("pagado"))
 
+            // Formato de número: 01, 02, etc.
             holder.txtId.text = String.format("%02d", id)
+
+            // Si el nombre está vacío en la BD, mostrar guiones
             holder.txtNom.text = if (nom.isNullOrEmpty()) "---" else nom
+
+            // Icono de estado
             holder.txtPag.text = if (pag == 1) "✅" else "❌"
 
-            holder.itemView.setBackgroundColor(if (position % 2 == 0) Color.parseColor("#FFF3E0") else Color.parseColor("#FFE0B2"))
+            // Colores alternos para que parezca una tabla profesional
+            if (position % 2 == 0) {
+                holder.itemView.setBackgroundColor(Color.parseColor("#FFF3E0")) // Crema claro
+            } else {
+                holder.itemView.setBackgroundColor(Color.parseColor("#FFE0B2")) // Naranja claro
+            }
         }
     }
 
     override fun getItemCount(): Int = cursor.count
 
+    // Función vital para actualizar la lista sin cerrar la pantalla
     fun swapCursor(newCursor: Cursor) {
         cursor.close()
         cursor = newCursor
