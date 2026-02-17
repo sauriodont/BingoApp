@@ -28,7 +28,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnPagos.setOnClickListener {
-            Toast.makeText(this, "Pagos", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, PagosActivity::class.java)
+            startActivity(intent)
         }
 
         binding.btnVentas.setOnClickListener {

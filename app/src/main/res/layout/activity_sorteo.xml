@@ -1,0 +1,135 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1B5E20">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/btnIniciarSorteo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="INICIAR SORTEO"
+            android:backgroundTint="#FFC107"
+            android:textColor="#000000"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="10dp">
+
+            <FrameLayout
+                android:id="@+id/containerMiniatura"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="#FFFFFF"
+                android:padding="2dp">
+                <GridLayout
+                    android:id="@+id/gridMiniatura"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:columnCount="5"
+                    android:rowCount="5"/>
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginStart="10dp">
+
+                <TextView android:text="Modalidad Actual:" android:textColor="#FFFFFF" android:layout_height="10sp" android:layout_width="10sp"/>
+                <Spinner android:id="@+id/spnModalidadesSorteo" android:layout_width="match_parent" android:layout_height="48dp" android:backgroundTint="#FFFFFF"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvBolillero"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginTop="15dp"
+            android:background="#143D16"
+            android:padding="4dp"/>
+
+        <LinearLayout
+                        android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="15dp">
+
+            <TextView
+                android:id="@+id/tvUltimaLetra"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-"
+                android:textSize="80sp"
+                android:textColor="#FFEB3B"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tvUltimoNumero"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00"
+                android:textSize="100sp"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:layout_marginStart="10dp"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnSacarNumero"
+            android:layout_width="200dp"
+            android:layout_height="80dp"
+            android:text="NÚMERO"
+            android:textSize="24sp"
+            android:backgroundTint="#4CAF50"
+            android:layout_marginTop="10dp"/>
+        <Button
+            android:id="@+id/btnCopiarBolillero"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="COPIAR BOLILLERO"
+            android:backgroundTint="#2196F3"
+            android:layout_marginTop="10dp"/>
+        <TextView
+            android:id="@+id/tvGanadoresInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ganadores: Ninguno"
+            android:textColor="#00FF00"
+            android:textStyle="italic"
+            android:layout_marginTop="10dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp">
+
+            <Button
+                android:id="@+id/btnBingo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:backgroundTint="#E91E63"
+                android:text="BINGO!" />
+
+            <Button
+                android:id="@+id/btnFinalizarSorteo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#F44336"
+                android:text="FINALIZAR" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
