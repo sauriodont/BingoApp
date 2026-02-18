@@ -36,7 +36,9 @@
         <activity android:name=".CrearCartonesActivity" />
         <activity android:name=".ModalidadesActivity" />
         <activity android:name=".VentasActivity" />
-        <activity android:name=".PagosActivity" />
+        <activity android:name=".PagosActivity"
+            android:exported="false"/>
+        <activity android:name=".SorteoActivity" />
     </application>
 
 </manifest>

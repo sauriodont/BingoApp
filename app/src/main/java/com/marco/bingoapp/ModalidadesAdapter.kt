@@ -32,4 +32,3 @@ class ModalidadesAdapter(
 }
 
 // Clase de apoyo
-data class Modalidad(val id: Int, val nombre: String, val config: String)

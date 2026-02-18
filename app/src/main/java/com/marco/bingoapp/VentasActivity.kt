@@ -3,6 +3,7 @@ package com.marco.bingoapp
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.database.Cursor
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
@@ -84,7 +85,6 @@ class VentasActivity : AppCompatActivity() {
         }
         cursor.close()
     }
-
     private fun guardarVenta() {
         val id = binding.spnCartones.selectedItem?.toString() ?: return
         val nombre = binding.etNombreComprador.text.toString().trim()

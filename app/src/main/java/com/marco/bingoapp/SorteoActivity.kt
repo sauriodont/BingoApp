@@ -3,6 +3,7 @@ package com.marco.bingoapp
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,6 +11,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.GridLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -21,16 +23,18 @@ import com.marco.bingoapp.databinding.ActivitySorteoBinding
 import java.io.File
 import java.io.FileOutputStream
 
+// Modelo local para evitar conflictos de declaración
+data class ModalidadSorteo(val nombre: String, val configuracion: String)
+
 class SorteoActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySorteoBinding
     private lateinit var dbHelper: BingoDbHelper
+    private var listaTotal = mutableListOf<Int>()
+    private var numerosSalidos = mutableListOf<Int>()
     private lateinit var adapterBolillero: BolilleroAdapter
-
-    private var listaTotal = (1..75).toMutableList()
-    private var numerosSalidos = mutableSetOf<Int>()
-    private var modalidadesSorteo = mutableListOf<ModalidadObjeto>()
-    private var modalidadSeleccionada: ModalidadObjeto? = null
+    private var sorteoIniciado = false
+    private var modalidadesActivas = mutableListOf<ModalidadSorteo>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,104 +43,107 @@ class SorteoActivity : AppCompatActivity() {
 
         dbHelper = BingoDbHelper(this)
 
-        // 1. Configurar UI Inicial
-        setupBolillero()
-        cargarModalidadesDisponibles()
+        // Inicializar bolillero (1-75)
+        reiniciarListas()
 
-        // 2. Recuperar estado si el sorteo ya estaba en curso
-        if (dbHelper.estaSorteoEnCurso()) {
-            cargarEstadoPartida()
-            binding.btnIniciarSorteo.visibility = View.GONE
-            binding.btnSacarNumero.isEnabled = true
-        } else {
-            binding.btnSacarNumero.isEnabled = false
-            verificarRequisitosPrevios()
-        }
-
-        // 3. Listeners
-        binding.btnIniciarSorteo.setOnClickListener { iniciarSorteo() }
-        binding.btnSacarNumero.setOnClickListener { sacarNumero() }
-        binding.btnCopiarBolillero.setOnClickListener { copiarVistaComoImagen(binding.rvBolillero) }
-        binding.containerMiniatura.setOnClickListener { copiarVistaComoImagen(binding.gridMiniatura) }
-        binding.btnBingo.setOnClickListener { confirmarBingo() }
-        binding.btnFinalizarSorteo.setOnClickListener { finalizarSorteoTotal() }
-    }
-
-    private fun verificarRequisitosPrevios() {
-        val cursor = dbHelper.obtenerUltimoReporte()
-        if (cursor.count == 0) {
-            Toast.makeText(this, "⚠️ Bloqueado: Primero guarda el reporte de pagos.", Toast.LENGTH_LONG).show()
-            binding.btnIniciarSorteo.isEnabled = false
-        }
-        cursor.close()
-    }
-
-    private fun setupBolillero() {
+        // Configurar RecyclerView del Bolillero (Tablero de números salidos)
         adapterBolillero = BolilleroAdapter(numerosSalidos)
-        binding.rvBolillero.layoutManager = GridLayoutManager(this, 10)
+        binding.rvBolillero.layoutManager = GridLayoutManager(this, 5)
         binding.rvBolillero.adapter = adapterBolillero
+
+        cargarModalidadesDesdePagos()
+        setupBotones()
     }
 
-    private fun cargarModalidadesDisponibles() {
-        val cursor = dbHelper.obtenerTodasLasModalidades()
-        modalidadesSorteo.clear()
+    private fun setupBotones() {
+        binding.btnSacarNumero.isEnabled = false
+        binding.btnBingo.isEnabled = false
+
+        binding.btnIniciarSorteo.setOnClickListener {
+            if (validarCondicionesSorteo()) {
+                ejecutarInicioSorteo()
+            }
+        }
+
+        binding.btnSacarNumero.setOnClickListener {
+            if (sorteoIniciado) sacarNumero()
+        }
+
+        binding.btnBingo.setOnClickListener {
+            verificarGanadores()
+        }
+
+        binding.btnFinalizarSorteo.setOnClickListener {
+            dbHelper.establecerSorteoEnCurso(false)
+            finish()
+        }
+
+        // Botón opcional para compartir la miniatura actual
+        binding.gridMiniatura.setOnClickListener {
+            val nombreMod = binding.tvNombreModActual.text.toString()
+            compartirMiniaturaComoImagen(binding.gridMiniatura, nombreMod)
+        }
+    }
+
+    private fun validarCondicionesSorteo(): Boolean {
+        if (modalidadesActivas.isEmpty()) {
+            mostrarError("No hay modalidades activas. Configúralas en Pagos.")
+            return false
+        }
+        if (dbHelper.contarCartonesPagos() == 0) {
+            mostrarError("No hay cartones pagados para sortear.")
+            return false
+        }
+        return true
+    }
+
+    private fun ejecutarInicioSorteo() {
+        sorteoIniciado = true
+        binding.btnSacarNumero.isEnabled = true
+        binding.btnBingo.isEnabled = true
+        binding.spnModalidadesSorteo.isEnabled = false // Bloquear para evitar errores en juego
+
+        reiniciarSorteoCompleto()
+        Toast.makeText(this, "¡Sorteo Iniciado!", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun cargarModalidadesDesdePagos() {
+        modalidadesActivas.clear()
+        val cursor = dbHelper.obtenerModalidadesActivasParaSorteo()
         if (cursor.moveToFirst()) {
             do {
                 val nombre = cursor.getString(cursor.getColumnIndexOrThrow("nombre"))
                 val config = cursor.getString(cursor.getColumnIndexOrThrow("configuracion"))
-                modalidadesSorteo.add(ModalidadObjeto(nombre, config))
+                modalidadesActivas.add(ModalidadSorteo(nombre, config))
             } while (cursor.moveToNext())
         }
         cursor.close()
 
-        val nombres = modalidadesSorteo.map { it.nombre }
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, nombres)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modalidadesActivas.map { it.nombre })
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spnModalidadesSorteo.adapter = adapter
 
         binding.spnModalidadesSorteo.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p0: AdapterView<*>?, p1: View?, pos: Int, p3: Long) {
-                modalidadSeleccionada = modalidadesSorteo[pos]
-                dibujarMiniatura(modalidadSeleccionada?.configuracion ?: "")
+                if (modalidadesActivas.isNotEmpty()) {
+                    val mod = modalidadesActivas[pos]
+                    binding.tvNombreModActual.text = mod.nombre
+                    dibujarMiniatura(mod.configuracion)
+                }
             }
             override fun onNothingSelected(p0: AdapterView<*>?) {}
         }
     }
 
-    private fun dibujarMiniatura(configJson: String) {
-        binding.gridMiniatura.removeAllViews()
-        val config = Gson().fromJson(configJson, Array<IntArray>::class.java) ?: return
-        for (i in 0..4) {
-            for (j in 0..4) {
-                val view = View(this)
-                val params = android.widget.GridLayout.LayoutParams()
-                params.width = 25
-                params.height = 25
-                params.setMargins(2, 2, 2, 2)
-                view.layoutParams = params
-                view.setBackgroundColor(if (config[i][j] == 1 || (i == 2 && j == 2)) Color.YELLOW else Color.DKGRAY)
-                binding.gridMiniatura.addView(view)
-            }
-        }
-    }
-
-    private fun iniciarSorteo() {
-        dbHelper.establecerSorteoEnCurso(true)
-        binding.btnIniciarSorteo.visibility = View.GONE
-        binding.btnSacarNumero.isEnabled = true
-        Toast.makeText(this, "🔒 Sorteo iniciado y bloqueado", Toast.LENGTH_SHORT).show()
-    }
-
     private fun sacarNumero() {
         if (listaTotal.isEmpty()) {
-            Toast.makeText(this, "¡Ya salieron todos los números!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Bolillero vacío", Toast.LENGTH_SHORT).show()
             return
         }
-
         val num = listaTotal.random()
         listaTotal.remove(num)
         numerosSalidos.add(num)
 
-        // CORRECCIÓN DEL WHEN: Estructura clara con flechas
         val letra = when (num) {
             in 1..15 -> "B"
             in 16..30 -> "I"
@@ -148,100 +155,119 @@ class SorteoActivity : AppCompatActivity() {
         binding.tvUltimaLetra.text = letra
         binding.tvUltimoNumero.text = num.toString()
 
-        // Copiar formato O69 al portapapeles
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Bingo", "$letra$num")
-        clipboard.setPrimaryClip(clip)
-
         adapterBolillero.notifyDataSetChanged()
-        verificarCartonesGanadores()
-        guardarEstadoPartida()
+        binding.rvBolillero.scrollToPosition(numerosSalidos.size - 1)
     }
 
-    private fun verificarCartonesGanadores() {
-        if (modalidadSeleccionada == null) return
-        val patron = Gson().fromJson(modalidadSeleccionada?.configuracion, Array<IntArray>::class.java)
-        val cursor = dbHelper.obtenerTodosLosCartones() // Deberías filtrar por pagado = 1 en el Helper
+    private fun verificarGanadores() {
+        val pos = binding.spnModalidadesSorteo.selectedItemPosition
+        if (pos == AdapterView.INVALID_POSITION) return
+
+        val modalidadActual = modalidadesActivas[pos]
+        val tipoLista = object : TypeToken<List<Int>>() {}.type
+        val indicesPatron: List<Int> = Gson().fromJson(modalidadActual.configuracion, tipoLista)
+
+        // IMPORTANTE: Requiere que implementes obtenerCartonesPagadosDetalle en el Helper
+        val cartonesPagados: List<CartonObjeto> = dbHelper.obtenerCartonesPagadosDetalle()
         val ganadores = mutableListOf<String>()
 
-        if (cursor.moveToFirst()) {
-            do {
-                if (cursor.getInt(cursor.getColumnIndexOrThrow("pagado")) == 1) {
-                    val matriz = Gson().fromJson(cursor.getString(cursor.getColumnIndexOrThrow("numeros")), Array<IntArray>::class.java)
-                    if (esGanador(matriz, patron)) {
-                        ganadores.add("ID: ${cursor.getInt(0)} - ${cursor.getString(1)}")
-                    }
-                }
-            } while (cursor.moveToNext())
-        }
-        cursor.close()
-        binding.tvGanadoresInfo.text = if (ganadores.isEmpty()) "Buscando..." else "🏆 GANADORES:\n${ganadores.joinToString("\n")}"
-    }
+        for (carton in cartonesPagados) {
+            val numerosCarton = carton.numeros.split(",").map { it.trim().toInt() }
+            var aciertos = 0
 
-    private fun esGanador(carton: Array<IntArray>, patron: Array<IntArray>): Boolean {
-        for (i in 0..4) {
-            for (j in 0..4) {
-                if (patron[i][j] == 1 && !(i == 2 && j == 2)) {
-                    if (!numerosSalidos.contains(carton[i][j])) return false
+            for (indice in indicesPatron) {
+                if (indice == 12) { // Espacio libre
+                    aciertos++
+                } else {
+                    val numEnCelda = numerosCarton[indice]
+                    if (numerosSalidos.contains(numEnCelda)) aciertos++
                 }
             }
+
+            if (aciertos == indicesPatron.size) {
+                ganadores.add("Cartón #${carton.id} - ${carton.propietario}")
+            }
         }
-        return true
-    }
 
-    private fun copiarVistaComoImagen(view: View) {
-        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        view.draw(Canvas(bitmap))
-        val file = File(cacheDir, "shared_image.png")
-        FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
-        val clip = ClipData.newUri(contentResolver, "BingoImage", uri)
-        (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
-        Toast.makeText(this, "📸 Imagen copiada al portapapeles", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun guardarEstadoPartida() {
-        val json = Gson().toJson(numerosSalidos)
-        val db = dbHelper.writableDatabase
-        val values = android.content.ContentValues().apply {
-            put("id", 1)
-            put("detalle_json", json)
+        if (ganadores.isEmpty()) {
+            Toast.makeText(this, "Aún no hay ganadores", Toast.LENGTH_SHORT).show()
+        } else {
+            mostrarDialogoGanador("¡BINGO!\n\n" + ganadores.joinToString("\n"))
         }
-        db.insertWithOnConflict("estado_sorteo", null, values, android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE)
     }
 
-    private fun cargarEstadoPartida() {
-        val db = dbHelper.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM estado_sorteo WHERE id = 1", null)
-        if (cursor.moveToFirst()) {
-            val json = cursor.getString(cursor.getColumnIndexOrThrow("detalle_json"))
-            val type = object : TypeToken<MutableSet<Int>>() {}.type
-            val recuperados: MutableSet<Int> = Gson().fromJson(json, type)
-            numerosSalidos.addAll(recuperados)
-            listaTotal.removeAll(recuperados)
-            adapterBolillero.notifyDataSetChanged()
-        }
-        cursor.close()
-    }
-
-    private fun confirmarBingo() {
+    private fun mostrarDialogoGanador(mensaje: String) {
         AlertDialog.Builder(this)
-            .setTitle("¿BINGO CONFIRMADO?")
-            .setMessage("Se registrará la modalidad como finalizada.")
-            .setPositiveButton("SÍ") { _, _ ->
-                // Aquí podrías quitar la modalidad del Spinner o marcarla como jugada
-                Toast.makeText(this, "Bingo registrado", Toast.LENGTH_SHORT).show()
-            }.setNegativeButton("NO", null).show()
+            .setTitle("¡Tenemos Ganador!")
+            .setMessage(mensaje)
+            .setCancelable(false)
+            .setPositiveButton("Seguir Sorteo") { d, _ -> d.dismiss() }
+            .setNeutralButton("Cambiar Modalidad") { _, _ ->
+                binding.spnModalidadesSorteo.isEnabled = true
+            }
+            .show()
     }
 
-    private fun finalizarSorteoTotal() {
-        AlertDialog.Builder(this)
-            .setTitle("¿FINALIZAR TODO EL SORTEO?")
-            .setPositiveButton("SÍ") { _, _ ->
-                dbHelper.establecerSorteoEnCurso(false)
-                // Aquí llamarás al PDF Generator
-                finish()
-            }.setNegativeButton("VOLVER", null).show()
+    private fun dibujarMiniatura(configuracionJson: String) {
+        binding.gridMiniatura.removeAllViews()
+        try {
+            val tipoLista = object : TypeToken<List<Int>>() {}.type
+            val celdasActivas: List<Int> = Gson().fromJson(configuracionJson, tipoLista)
+
+            for (i in 0 until 25) {
+                val celda = View(this)
+                val params = GridLayout.LayoutParams(
+                    GridLayout.spec(GridLayout.UNDEFINED, 1f),
+                    GridLayout.spec(GridLayout.UNDEFINED, 1f)
+                ).apply {
+                    width = 0
+                    height = 0
+                    setMargins(2, 2, 2, 2)
+                }
+                celda.layoutParams = params
+                celda.setBackgroundColor(if (celdasActivas.contains(i)) Color.RED else Color.WHITE)
+                binding.gridMiniatura.addView(celda)
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    private fun compartirMiniaturaComoImagen(view: View, nombreMod: String) {
+        try {
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            view.draw(canvas)
+
+            val folder = File(externalCacheDir, "images")
+            folder.mkdirs()
+            val file = File(folder, "patron.png")
+            val out = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            out.close()
+
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(intent, "Compartir Patrón: $nombreMod"))
+        } catch (e: Exception) { Toast.makeText(this, "Error al compartir", Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun reiniciarListas() {
+        listaTotal.clear()
+        for (i in 1..75) listaTotal.add(i)
+        numerosSalidos.clear()
+    }
+
+    private fun reiniciarSorteoCompleto() {
+        reiniciarListas()
+        binding.tvUltimaLetra.text = "-"
+        binding.tvUltimoNumero.text = "00"
+        adapterBolillero.notifyDataSetChanged()
+    }
+
+    private fun mostrarError(mensaje: String) {
+        Toast.makeText(this, "⚠️ $mensaje", Toast.LENGTH_LONG).show()
     }
 }
-data class ModalidadObjeto(val nombre: String, val configuracion: String)

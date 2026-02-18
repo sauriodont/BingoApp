@@ -6,6 +6,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.gson.Gson // IMPORTANTE: Asegúrate de tener esta importación
 import com.marco.bingoapp.databinding.ActivityModalidadesBinding
 
 class ModalidadesActivity : AppCompatActivity() {
@@ -25,8 +26,6 @@ class ModalidadesActivity : AppCompatActivity() {
         setupRecyclerView()
 
         binding.btnGuardarModalidad.setOnClickListener { validarYGuardar() }
-
-        // Botón Limpiar (asegúrate de tenerlo en tu XML o añádelo)
         binding.btnLimpiarGrid.setOnClickListener { limpiarGrid() }
     }
 
@@ -37,15 +36,13 @@ class ModalidadesActivity : AppCompatActivity() {
                 val resId = resources.getIdentifier(cellIdName, "id", packageName)
                 val view = findViewById<TextView>(resId)
 
-                // Celda central LIBRE por defecto
                 if (i == 2 && j == 2) {
                     celdasSeleccionadas[i][j] = true
                     view.setBackgroundColor(Color.parseColor("#8BC34A"))
                 }
 
                 view.setOnClickListener {
-                    if (i == 2 && j == 2) return@setOnClickListener // No desmarcar el centro
-
+                    if (i == 2 && j == 2) return@setOnClickListener
                     celdasSeleccionadas[i][j] = !celdasSeleccionadas[i][j]
                     view.setBackgroundColor(if (celdasSeleccionadas[i][j])
                         Color.parseColor("#8BC34A") else Color.parseColor("#2196F3"))
@@ -66,8 +63,7 @@ class ModalidadesActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        val lista = cargarModalidadesDeBD()
-        adapter = ModalidadesAdapter(lista) { modalidad ->
+        adapter = ModalidadesAdapter(cargarModalidadesDeBD()) { modalidad ->
             dbHelper.eliminarModalidad(modalidad.id)
             actualizarLista()
         }
@@ -96,32 +92,38 @@ class ModalidadesActivity : AppCompatActivity() {
         adapter.notifyDataSetChanged()
     }
 
+    // --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
     private fun validarYGuardar() {
         val nombre = binding.txtNombreModalidad.text.toString().trim()
-        val coordenadas = mutableListOf<String>()
 
+        // 1. Convertimos la matriz 5x5 a una lista de índices simples (0-24)
+        val indicesActivos = mutableListOf<Int>()
+        var contador = 0
         for (i in 0 until 5) {
             for (j in 0 until 5) {
-                if (celdasSeleccionadas[i][j]) coordenadas.add("$i,$j")
+                if (celdasSeleccionadas[i][j]) {
+                    indicesActivos.add(contador)
+                }
+                contador++
             }
         }
 
-        val configString = coordenadas.joinToString(";")
+        // 2. Usamos GSON para guardar como un JSON real: "[0,1,12...]"
+        val configJson = Gson().toJson(indicesActivos)
 
         if (nombre.isEmpty()) {
             Toast.makeText(this, "Escribe un nombre", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // VALIDACIÓN DE DUPLICADOS
-        if (dbHelper.existeModalidad(nombre, configString)) {
+        if (dbHelper.existeModalidad(nombre, configJson)) {
             Toast.makeText(this, "El nombre o el patrón ya existen", Toast.LENGTH_LONG).show()
             return
         }
 
-        val id = dbHelper.insertarModalidad(nombre, configString)
+        val id = dbHelper.insertarModalidad(nombre, configJson)
         if (id != -1L) {
-            Toast.makeText(this, "Guardado", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Guardado con éxito", Toast.LENGTH_SHORT).show()
             binding.txtNombreModalidad.text.clear()
             limpiarGrid()
             actualizarLista()

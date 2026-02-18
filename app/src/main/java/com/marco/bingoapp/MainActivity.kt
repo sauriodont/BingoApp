@@ -9,14 +9,12 @@ import com.marco.bingoapp.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var dbHelper: BingoDbHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        dbHelper = BingoDbHelper(this)
-        val db = dbHelper.writableDatabase
+
         binding.btnCrearCartones.setOnClickListener {
             val intent = Intent(this, CrearCartonesActivity::class.java)
             startActivity(intent)
@@ -24,7 +22,8 @@ class MainActivity : AppCompatActivity() {
 
 
         binding.btnJugar.setOnClickListener {
-            Toast.makeText(this, "Jugar", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, SorteoActivity::class.java)
+            startActivity(intent)
         }
 
         binding.btnPagos.setOnClickListener {
