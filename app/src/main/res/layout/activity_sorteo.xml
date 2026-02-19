@@ -90,11 +90,26 @@
                     <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="O" android:textColor="#FFFFFF" android:gravity="center" android:textStyle="bold" android:textSize="22sp"/>
                 </LinearLayout>
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvBolillero"
+                <FrameLayout
+                    android:id="@+id/containerBolillero"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:overScrollMode="never" />
+                    android:padding="8dp">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvBolillero"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false" />
+
+                    <View
+                        android:id="@+id/capaClicBolillero"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?android:attr/selectableItemBackground" />
+                </FrameLayout>
             </LinearLayout>
 
             <LinearLayout
